@@ -4,7 +4,7 @@
   "description": "A boilerplate for React project",
   "main": "",
   "scripts": {
-    "start": "webpack-dev-server --colors --inline --history-api-fallback --env.dev --env.config dev",
+    "start": "webpack-dev-server --colors --inline --history-api-fallback",
     "build": "rimraf build && webpack -p --config webpack-build.config.js"
   },
   "author": "Zhao Jun",
@@ -22,6 +22,11 @@
     "babel-preset-react": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
     "css-loader": "^0.28.0",
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb": "latest",
+    "eslint-plugin-import": "latest",
+    "eslint-plugin-jsx-a11y": "^4.0.0",
+    "eslint-plugin-react": "latest",
     "extract-text-webpack-plugin": "^2.1.0",
     "file-loader": "^0.11.1",
     "html-loader": "^0.4.5",
