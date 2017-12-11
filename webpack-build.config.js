@@ -1,9 +1,11 @@
-const webpack = require('webpack');
 const path = require('path');
+const webpack = require('webpack');
 // 动态插入bundle好的js到index.html
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
+const APP_FILE = path.resolve(__dirname, 'src/index.js'); // 项目的入口文件（即src/index.jsx）
+const BUILD_PATH = path.resolve(__dirname, 'build'); 
 
 const HTMLWebpackPluginConfig = new HtmlWebpackPlugin({
     template: './src/index.html',
@@ -19,12 +21,12 @@ const HTMLWebpackPluginConfig = new HtmlWebpackPlugin({
 module.exports = {
     entry: {
         bundle:[
-            path.resolve(__dirname, 'src/index.js')
+            APP_FILE
         ],
         vendor: ['react']
     },
     output: {
-        path: path.resolve(__dirname, 'build'),
+        path: BUILD_PATH,
         filename: '[name][hash].js',
         publicPath:  'http://oor44os1i.bkt.clouddn.com/',
         chunkFilename: '[name].js' //注意这里，用[name]可以自动生成路由名称对应的js文件

@@ -1,10 +1,13 @@
-const webpack = require('webpack');
 const path = require('path');
+const webpack = require('webpack');
 const OpenBrowserPlugin = require('open-browser-webpack-plugin');
 // 动态插入bundle好的js到index.html
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
+const APP_PATH = path.resolve(__dirname, 'src'); // 项目的src目录路径
+const APP_FILE = path.resolve(__dirname, 'src/index.js'); // 项目的入口文件（即src/index.jsx）
+const BUILD_PATH = path.resolve(__dirname, 'build'); 
 
 const HTMLWebpackPluginConfig = new HtmlWebpackPlugin({
     template: './src/index.html',
@@ -18,71 +21,78 @@ const HTMLWebpackPluginConfig = new HtmlWebpackPlugin({
 });
 
 module.exports = {
+    devtool: 'cheap-module-eval-source-map',     
     entry: {
         bundle:[
-            path.resolve(__dirname, 'src/index.js')
-            ]
+            APP_FILE
+        ]
     },
     output: {
-        path: path.resolve(__dirname, 'build'),
+        path: BUILD_PATH,
         filename: '[name][hash].js',
         publicPath:  '/'
     },
     module: {
-        rules: [
-            {
-                test: /\.(css|scss)$/,
-                use: ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    //resolve-url-loader may be chained before sass-loader if necessary
-                    use: ['css-loader', 'sass-loader','postcss-loader']
-                })
+        rules: [{
+            test: /\.js$/, // 解析.js,用babel解析器，webpack会自动加载我们配置的.babelrc文件
+            exclude: function(path) {
+                // 路径中含有 node_modules 的就不去解析。
+                var isNpmModule = !!path.match(/node_modules/);
+                return isNpmModule;
             },
-            {
-                test: /\.html$/,
-                use: [
-                    {
-                        loader: 'html-loader',
-                        options: {
-                            /*
-                             html-loader接受attrs参数, 表示什么标签的什么属性需要调用webpack的loader进行打包.
-                             比如<imgs>标签的src属性, webpack会把<imgs>引用的图片打包, 然后src的属性值替换为打包后的路径.
-                             使用什么loader代码, 同样是在module.rules定义中使用匹配的规则.
-
-                             如果html-loader不指定attrs参数, 默认值是img:src, 意味着会默认打包<imgs>标签的图片.
-                             这里我们加上<link>标签的href属性, 用来打包入口index.html引入的favicon.png文件.
-                             */
-                            attrs: ['imgs:src', 'link:href']
-                        }
-                    }
-                ]
+            use: ['babel-loader'],
+            include: [APP_PATH]
+        }, {
+            test: /\.css$/, // 解析.css,先执行css-loader,再执行style-loader
+            exclude: function(path) {
+                // 路径中含有 node_modules 的就不去解析。
+                var isNpmModule = !!path.match(/node_modules/);
+                return isNpmModule;
             },
-
-            {
-                /*
-                 匹配favicon.png
-                 上面的html-loader会把入口index.html引用的favicon.png图标文件解析出来进行打包
-                 打包规则就按照这里指定的loader执行
-                 */
-                test: /favicon\.png$/,
-
-                use: [
-                    {
-                        // 使用file-loader
-                        loader: 'file-loader',
-                        options: {
-                            name: '[name].[ext]?[hash]'
-                        }
-                    }
-                ]
+            use: ExtractTextPlugin.extract({
+                fallback:'style-loader', 
+                use:['css-loader', 'postcss-loader']
+            }),
+            include: [APP_PATH]
+        }, {
+            // 解析.less,先执行css-loader,再执行style-loader
+            // 注意：连node_modules中的也一并解析(因为蚂蚁金服ui框架的样式文件就存在此目录下)
+            test: /\.less$/, // 去掉exclude: /^node_modules$/和include: [APP_PATH]是为了babel-plugin-import按需加载mcwpadmin资源
+            use: ExtractTextPlugin.extract({
+                fallback:'style-loader', 
+                use:['css-loader', 'postcss-loader', 'less-loader']
+            })
+        }, {
+            // 其他各类文件处理，打包后会把这些文件挪到打包好的文件夹中
+            test: /\.(eot|woff|svg|ttf|woff2|appcache)(\?|$)/,
+            exclude: function(path) {
+                // 路径中含有 node_modules 的就不去解析。
+                var isNpmModule = !!path.match(/node_modules/);
+                return isNpmModule;
             },
-            {test: /\.js[x]?$/, use: 'babel-loader'},
-            // exclude: /node_modules/
-            // { test: /\.(png|jpg)$/, use: 'file-loader'},
-            {test: /\.(png|jpg)$/, exclude: /favicon\.png$/,use: [{loader: 'url-loader', options: {limit: 15000,name:'./[name].[ext]?[hash]'}}]}
-            //可以使/开头的文件相对于root目录解析
-            // {test: /\.html$/, use: [{loader: 'html-loader', options: {root: path.resolve(__dirname, 'src'), attrs: ['imgs:src', 'link:href']}}]}
-        ]
+            use: ['file-loader?name=[name].[ext]'],
+            include: [APP_PATH]
+        }, {
+             // 处理图片，这里配置的是，小于8192字节的图片变成base64编码，其余图片最终会生成一个images文件夹，存放其中
+            test: /\.(png|jpg|gif)$/,
+            exclude: function(path) {
+                // 路径中含有 node_modules 的就不去解析。
+                var isNpmModule = !!path.match(/node_modules/);
+                return isNpmModule;
+            },
+            use: ['url-loader?limit=8192&name=images/[hash:8].[name].[ext]'],
+            //注意后面那个limit的参数，当你图片大小小于这个限制的时候，会自动启用base64编码图片
+            include: [APP_PATH]
+        }, {
+            test: /\.jsx$/, // 解析.jsx,用babel解析器，webpack会自动加载我们配置的.babelrc文件
+            exclude: function(path) {
+                // 路径中含有 node_modules 的就不去解析。
+                var isNpmModule = !!path.match(/node_modules/);
+                return isNpmModule;
+            },
+            use: ['jsx-loader', 'babel-loader'],
+            include: [APP_PATH]
+        }]
     },
     plugins: [
         HTMLWebpackPluginConfig,
@@ -96,5 +106,4 @@ module.exports = {
             '~': path.resolve(__dirname, 'src')
         }
     }
-    
-};
+}
